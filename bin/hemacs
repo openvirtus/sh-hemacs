@@ -194,6 +194,10 @@ hemacs_install_essentials() {
 (setq-default c-file-style "k&r")
 (setq-default c-basic-offset 4)
 (setq gnutls-algorithm-priority "NORMAL:-VERS-TLS1.2")
+(setq-default
+ whitespace-line-column 80
+ whitespace-style       '(face lines-tail))
+(add-hook 'prog-mode-hook #'whitespace-mode)
 
 (require 'tool-bar)
 (require 'package)
