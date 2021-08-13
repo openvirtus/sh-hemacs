@@ -47,7 +47,9 @@
 #h: -D NAME                : Delete code named `NAME` from `init.el`.
 #h: -L                     : List code added to `init.el`
 #r:
-. hutil
+. hlog
+. hfile
+. hstr
 hemacs() {
     ## Parse command line.
     local OPTIND optopt= ops= in_name= in_text= packages= p=
@@ -57,8 +59,8 @@ hemacs() {
             P)  local packages="${packages} ${OPTARG}";;
             A)  local in_name="${OPTARG}";;
             I)  local in_name="${OPTARG}";;
-            B)  local in_name="`hutil optopt "${OPTARG}"`" \
-                      in_text="`hutil optarg "${OPTARG}"`";;
+            B)  local in_name="`hstr optopt "${OPTARG}"`" \
+                      in_text="`hstr optarg "${OPTARG}"`";;
             D)  local in_name="$OPTARG";;
             \?) return 1;;
         esac
@@ -107,12 +109,12 @@ hemacs_show_variables() {
 
 
 ## --- [INIT MANAGER] ------------------------------------------------------------------------------
-hemacs_del_code() { hutil fdel "$HEMACS_INIT_FILE" "$1"; }
-hemacs_add_code() { hutil fadd "$HEMACS_INIT_FILE" "$1"; }
+hemacs_del_code() { hfile fdel "$HEMACS_INIT_FILE" "$1"; }
+hemacs_add_code() { hfile fadd "$HEMACS_INIT_FILE" "$1"; }
 hemacs_ins_code() {
     mkdir -p "$HEMACS_USER_DIRECTORY"
     touch "$HEMACS_INIT_FILE"
-    hutil fdel "$HEMACS_INIT_FILE" "$1"
+    hfile fdel "$HEMACS_INIT_FILE" "$1"
     cat > "$HEMACS_INIT_FILE".tmp <<EOF
 ;; -- $1 --
 `cat`
@@ -123,7 +125,7 @@ EOF
 }
 hemacs_add_code_button() {
     local name="${1}" text="${2:-$1}"
-    hutil errif "Please specify a button name." test ! -n "${name}"
+    test -n "${name}" || hlog fatal "Please specify a button name."
     ## Add custom menu.
     if test ! -n "`hemacs_lst_code | grep custom-menu-2`";then
         hemacs_add_code "custom-menu" <<EOF
@@ -194,8 +196,11 @@ EOF
 
 ## --- [ESSENTIALS] ---------------------------------------------------------------------------------
 hemacs_install_essentials() {
-    hutil info "Installing basic configuration in ~/.emacs.d/init.el ..."
+    hlog info "Installing basic configuration in ~/.emacs.d/init.el ..."
     hemacs_ins_code "HEMACS" <<EOF
+(require 'ob-shell)
+(require 'ob-octave)
+(require 'ob-maxima)
 (setq-default indent-tabs-mode nil)
 (setq-default c-file-style "k&r")
 (setq-default c-basic-offset 4)
@@ -240,19 +245,19 @@ EOF
     
 }
 hemacs_install_normal() {
-    hutil info "Installing flycheck ..."
+    hlog info "Installing flycheck ..."
     hemacs -P flycheck
-    hutil info "Installing 'company' and 'company-quickhelp' ..."
+    hlog info "Installing 'company' and 'company-quickhelp' ..."
     hemacs -P company
     hemacs -P company-quickhelp
     hemacs -P company-c-headers
-    hutil info "Installing 'sr-speedbar' ..."
+    hlog info "Installing 'sr-speedbar' ..."
     hemacs -P sr-speedbar
-    hutil info "Installing 'yafolding' ..."
+    hlog info "Installing 'yafolding' ..."
     hemacs -P yafolding
-    hutil info "Installing 'yasnippet' and yasnippet-snippets"
+    hlog info "Installing 'yasnippet' and yasnippet-snippets"
     hemacs -P "yasnippet" "yasnippet-snippets"
-    hutil info "Editing ~/.emacs.d/init.el ..."
+    hlog info "Editing ~/.emacs.d/init.el ..."
     hemacs_ins_code BASE <<EOF
 
 ;; ====[ COMPANY ]==============================================================
@@ -287,7 +292,7 @@ hemacs_install_normal() {
 
 EOF
     if test -n "${YASNIPPET}";then
-	hutil info "Linking ~/.yasnippet to ${YASNIPPET} ..."
+	hlog info "Linking ~/.yasnippet to ${YASNIPPET} ..."
 	rm -f ~/.yasnippet
 	ln -s "${YASNIPPET}" ~/.yasnippet
     fi
@@ -303,6 +308,8 @@ if test @"`basename "$0"`" = @"hemacs";then
     if test -n "$1";then
         hemacs "$@"
     else
-        hutil help
+        sed -n 's/^ *#h: \{0,1\}//p' "$0" | sed "s|\\\$0|`basename $0`|g"
+        echo ""
+        sed -n 's/^ *#l: \{0,2\}//p' "$0"
     fi
 fi
